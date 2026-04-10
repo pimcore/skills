@@ -6,13 +6,24 @@ A collection of skills for AI coding assistants (Claude Code, OpenCode) to help 
 
 ### Claude Code
 
+Install:
+
 ```bash
 git clone https://github.com/pimcore/skills.git ~/pimcore-skills
 mkdir -p ~/.claude/skills
 ln -s ~/pimcore-skills/skills/* ~/.claude/skills/
 ```
 
+Update:
+
+```bash
+cd ~/pimcore-skills && git pull
+ln -sf ~/pimcore-skills/skills/* ~/.claude/skills/
+```
+
 ### OpenCode
+
+Install:
 
 ```bash
 git clone https://github.com/pimcore/skills.git ~/pimcore-skills
@@ -20,19 +31,16 @@ mkdir -p ~/.config/opencode/skills
 ln -s ~/pimcore-skills/skills/* ~/.config/opencode/skills/
 ```
 
-### Updating
-
-Pull the latest skills with:
+Update:
 
 ```bash
 cd ~/pimcore-skills && git pull
+ln -sf ~/pimcore-skills/skills/* ~/.config/opencode/skills/
 ```
-
-If new skills were added, re-run the symlink command from the installation step to link them. Existing symlinks pick up content updates automatically.
 
 ### Windows
 
-Symlinks only work in **WSL**. On native Windows, manually copy the `skills/*` folders into the agent's skills directory after each `git pull`.
+Symlinks only work in **WSL**. On native Windows, manually copy the `skills/*` folders into the agent's skills directory.
 
 ## Skills
 
