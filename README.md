@@ -1,74 +1,102 @@
 # Pimcore Skills
 
-A collection of skills for AI coding assistants (Claude Code, OpenCode, etc.) to help build Pimcore Studio UI bundles and extensions.
-
-## What Are Skills?
-
-Skills are domain-specific instruction sets that give AI assistants the context they need to write code that follows Pimcore Studio conventions. They cover component patterns, extension points, data fetching, forms, permissions, and more.
+A collection of skills for AI coding assistants (Claude Code, OpenCode) to help build Pimcore Studio bundles and extensions.
 
 ## Installation
 
 ### Claude Code
 
+Install:
+
 ```bash
 git clone https://github.com/pimcore/skills.git ~/pimcore-skills
-
 mkdir -p ~/.claude/skills
 ln -s ~/pimcore-skills/skills/* ~/.claude/skills/
 ```
 
+Update:
+
+```bash
+cd ~/pimcore-skills && git pull
+ln -sf ~/pimcore-skills/skills/* ~/.claude/skills/
+```
+
 ### OpenCode
+
+Install:
 
 ```bash
 git clone https://github.com/pimcore/skills.git ~/pimcore-skills
-
 mkdir -p ~/.config/opencode/skills
 ln -s ~/pimcore-skills/skills/* ~/.config/opencode/skills/
 ```
 
-Update later with `cd ~/pimcore-skills && git pull`.
+Update:
 
-## What's Included
+```bash
+cd ~/pimcore-skills && git pull
+ln -sf ~/pimcore-skills/skills/* ~/.config/opencode/skills/
+```
 
-### Bundle Setup & Architecture
-- **pimcore-studio-bundle-setup** — Create a Studio bundle from scratch (PHP + frontend boilerplate)
-- **pimcore-studio-ui-bundle-structure** — Bundle directory layout and organization
-- **pimcore-studio-ui-using-sdk-in-bundles** — Plugins, modules, dependency injection, registries
+### Windows
 
-### Components
-- **pimcore-studio-ui-buttons** — Button, IconButton, IconTextButton, DropdownButton, ButtonGroup
-- **pimcore-studio-ui-forms-antd** — FormKit + Ant Design forms
-- **pimcore-studio-ui-icons** — Icon component, custom SVG registration, color groups
-- **pimcore-studio-ui-layout-components** — Content, Box, Flex, Space, ConfigLayout
-- **pimcore-studio-ui-modals** — Modal dialogs (declarative + imperative)
-- **pimcore-studio-ui-notifications-toasts** — Toast messages via useMessage
-- **pimcore-studio-ui-react-components** — Component patterns, structure, styling
-- **pimcore-studio-ui-tables-grids** — Grid component and TanStack Table
+Symlinks only work in **WSL**. On native Windows, manually copy the `skills/*` folders into the agent's skills directory.
 
-### Extension Points
-- **pimcore-studio-ui-context-menus** — Adding items to tree/grid/toolbar context menus
-- **pimcore-studio-ui-listings** — Custom listings via the ListingBuilder decorator pattern
-- **pimcore-studio-ui-navigation** — Main navigation entries and perspective permissions
-- **pimcore-studio-ui-tabs-editors** — Custom editor tabs (asset/document/data-object)
-- **pimcore-studio-ui-widgets** — Custom widgets and widget areas
+## Skills
 
-### Patterns & Fundamentals
-- **pimcore-studio-ui-dynamic-types** — Extensible type system (grid cells, field definitions, data types)
-- **pimcore-studio-ui-error-handling** — trackError, ApiError, GeneralError, ErrorBoundary
-- **pimcore-studio-ui-i18n** — useTranslation, key conventions, interpolation
-- **pimcore-studio-ui-permissions** — Element, user, and perspective permission checks
-- **pimcore-studio-ui-rtk-query-fundamentals** — Data fetching, mutations, caching, error handling
-- **pimcore-studio-ui-typescript-best-practices** — Type safety rules, lodash utils, return types
+### Pimcore Studio
 
-### Reference
-- **CRITICAL-IMPORT-PATHS.md** — Import path rules (`@sdk/*` vs `@Pimcore/*` vs `@pimcore/studio-ui-bundle/*`)
+#### UI — Bundle Setup & Architecture
 
-## Resources
+- [pimcore-studio-bundle-setup](skills/pimcore-studio-bundle-setup/SKILL.md)
+- [pimcore-studio-ui-bundle-structure](skills/pimcore-studio-ui-bundle-structure/SKILL.md)
+- [pimcore-studio-ui-using-sdk-in-bundles](skills/pimcore-studio-ui-using-sdk-in-bundles/SKILL.md)
 
-- [Pimcore Studio UI Documentation](https://docs.pimcore.com/platform/Studio_UI/)
-- [Studio Plugins Getting Started](https://docs.pimcore.com/platform/Studio_UI/Plugins_Getting_Started)
-- [Studio Example Bundle](https://github.com/pimcore/studio-example-bundle)
+#### UI — Components
 
-## License
+- [pimcore-studio-ui-buttons](skills/pimcore-studio-ui-buttons/SKILL.md)
+- [pimcore-studio-ui-forms-antd](skills/pimcore-studio-ui-forms-antd/SKILL.md)
+- [pimcore-studio-ui-icons](skills/pimcore-studio-ui-icons/SKILL.md)
+- [pimcore-studio-ui-layout-components](skills/pimcore-studio-ui-layout-components/SKILL.md)
+- [pimcore-studio-ui-modals](skills/pimcore-studio-ui-modals/SKILL.md)
+- [pimcore-studio-ui-notifications-toasts](skills/pimcore-studio-ui-notifications-toasts/SKILL.md)
+- [pimcore-studio-ui-react-components](skills/pimcore-studio-ui-react-components/SKILL.md)
+- [pimcore-studio-ui-tables-grids](skills/pimcore-studio-ui-tables-grids/SKILL.md)
 
-See LICENSE file.
+#### UI — Extension Points
+
+- [pimcore-studio-ui-context-menus](skills/pimcore-studio-ui-context-menus/SKILL.md)
+- [pimcore-studio-ui-listings](skills/pimcore-studio-ui-listings/SKILL.md)
+- [pimcore-studio-ui-navigation](skills/pimcore-studio-ui-navigation/SKILL.md)
+- [pimcore-studio-ui-tabs-editors](skills/pimcore-studio-ui-tabs-editors/SKILL.md)
+- [pimcore-studio-ui-widgets](skills/pimcore-studio-ui-widgets/SKILL.md)
+
+#### UI — Patterns & Fundamentals
+
+- [pimcore-studio-ui-dynamic-types](skills/pimcore-studio-ui-dynamic-types/SKILL.md)
+- [pimcore-studio-ui-error-handling](skills/pimcore-studio-ui-error-handling/SKILL.md)
+- [pimcore-studio-ui-i18n](skills/pimcore-studio-ui-i18n/SKILL.md)
+- [pimcore-studio-ui-permissions](skills/pimcore-studio-ui-permissions/SKILL.md)
+- [pimcore-studio-ui-rtk-query-fundamentals](skills/pimcore-studio-ui-rtk-query-fundamentals/SKILL.md)
+- [pimcore-studio-ui-typescript-best-practices](skills/pimcore-studio-ui-typescript-best-practices/SKILL.md)
+
+#### UI — Reference
+
+- [CRITICAL-IMPORT-PATHS.md](skills/CRITICAL-IMPORT-PATHS.md)
+
+#### Backend — Architecture & Code Style
+
+- [pimcore-studio-backend-checklist](skills/pimcore-studio-backend-checklist/SKILL.md)
+- [pimcore-studio-backend-code-style](skills/pimcore-studio-backend-code-style/SKILL.md)
+- [pimcore-studio-backend-config](skills/pimcore-studio-backend-config/SKILL.md)
+
+#### Backend — Layers
+
+- [pimcore-studio-backend-controller](skills/pimcore-studio-backend-controller/SKILL.md)
+- [pimcore-studio-backend-service](skills/pimcore-studio-backend-service/SKILL.md)
+- [pimcore-studio-backend-dto](skills/pimcore-studio-backend-dto/SKILL.md)
+
+#### Backend — Patterns
+
+- [pimcore-studio-backend-exception](skills/pimcore-studio-backend-exception/SKILL.md)
+- [pimcore-studio-backend-openapi-docs](skills/pimcore-studio-backend-openapi-docs/SKILL.md)
