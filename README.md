@@ -84,6 +84,9 @@ Symlinks only work in **WSL**. On native Windows, manually copy the `skills/*` f
 
 - [CRITICAL-IMPORT-PATHS.md](skills/CRITICAL-IMPORT-PATHS.md)
 
+#### UI / UX - General Guidelines
+- [pimcore-studio-ui-ui-ux-guidelines](skills/pimcore-studio-ui-ux-ui-guidelines/SKILL.md)
+
 #### Backend — Architecture & Code Style
 
 - [pimcore-studio-backend-checklist](skills/pimcore-studio-backend-checklist/SKILL.md)
