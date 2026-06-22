@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && \"${CLAUDE_PLUGIN_ROOT}/scripts/phpnav\" index 2>&1 || echo 'php-navigator: indexing skipped — install universal-ctags and ripgrep to enable it'",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

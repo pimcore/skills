@@ -1,0 +1,7 @@
+{
+  "name": "php-navigator",
+  "version": "1.0.0",
+  "description": "Fast, token-efficient PHP code navigation (ctags + ripgrep) with automatic indexing on session start. Use instead of find/grep to locate where PHP classes, methods, functions, and constants are defined or used.",
+  "author": { "name": "your-name" },
+  "keywords": ["php", "navigation", "ctags", "ripgrep", "code-search"]
+}
