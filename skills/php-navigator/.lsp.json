@@ -1,0 +1,13 @@
+{
+  "php": {
+    "command": "phpactor",
+    "args": ["language-server"],
+    "extensionToLanguage": {
+      ".php": "php",
+      ".phtml": "php"
+    },
+    "transport": "stdio",
+    "startupTimeout": 30000,
+    "maxRestarts": 3
+  }
+}

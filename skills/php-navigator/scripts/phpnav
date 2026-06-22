@@ -1,130 +1,148 @@
-#!/usr/bin/env bash
-#
-# phpnav — fast PHP code navigation via a symbol index (ctags) + ripgrep.
-#
-# Why this exists: `find` searches filenames and `grep -r` scans raw text, so
-# "where is class X defined?" turns into a full scan that returns every mention.
-# A symbol index maps each class/function/method/etc. to its exact definition,
-# so a lookup is a single sorted-file read instead of a scan of the whole tree.
-#
-# Commands:
-#   phpnav index            (re)build the symbol index for the current project
-#   phpnav def   <symbol>   show where a class/function/method/etc. is DEFINED
-#   phpnav refs  <symbol>   show every place a symbol is USED (ripgrep, PHP only)
-#   phpnav outline <file>   list the symbols defined in one file, in order
-#   phpnav grep  <pattern>  free-text search restricted to PHP files
-#
-# The index lives in $PHPNAV_TAGS (default: .php-tags in the project root).
-# Add that filename to .gitignore — it is a build artifact.
+---
+name: php-navigator
+description: >-
+  Fast, token-efficient navigation of PHP codebases using a symbol index
+  (ctags) plus ripgrep, with a Phpactor language server for semantic
+  navigation. Use this skill WHENEVER working in a PHP project and you need to
+  locate code: finding where a class, interface, trait, function, method,
+  constant, or property is DEFINED; finding everywhere a symbol is USED; finding
+  which classes implement an interface; jumping to a definition; or getting an
+  outline of a file. Reach for this skill any time you would otherwise run
+  `find`, `grep -r`, `ls -R`, or a broad `rg` over a PHP repo to answer "where
+  is X?" — even if the user just says "find", "where is", "show me the class",
+  "look up", or "go to". Prefer it over raw search tools for any PHP repo of
+  non-trivial size.
+---
 
-set -euo pipefail
+# PHP Navigator
 
-TAGS_FILE="${PHPNAV_TAGS:-.php-tags}"
-# Symbol kinds worth indexing: classes, constants, functions, interfaces,
-# namespaces, traits, variables/properties. Local variables (l) and aliases (a)
-# are intentionally excluded — they create huge noise with no navigation value.
-KINDS="cdfintv"
+Navigating a PHP codebase with `find` and `grep -r` is slow and wasteful: `find`
+only matches filenames, and `grep` scans raw text and returns every mention of a
+name, so the one *definition* you want is buried among dozens of usages. Reading
+all that noise burns time and context.
 
-die() { printf 'phpnav: %s\n' "$*" >&2; exit 1; }
+This skill gives you two complementary layers. Use them in this order:
 
-need() {
-  command -v "$1" >/dev/null 2>&1 || die "$1 not found. $2"
-}
+1. **The Phpactor language server (LSP)** — bundled with this plugin and the
+   *preferred* tool for navigation. Because it actually parses PHP, it resolves
+   namespaces, `use` aliases, and inheritance, so it answers questions ctags
+   can't: go-to-definition through imports, find-implementations of an
+   interface, and accurate find-references. It also reports diagnostics
+   (undefined symbols, basic type errors) back automatically after each edit, so
+   mistakes surface immediately. When the LSP is available, prefer its
+   operations (go-to-definition, go-to-implementation, find-references, hover,
+   document/workspace symbol) over text search for any "where is / what
+   implements / what calls" question.
 
-cmd_index() {
-  need ctags "Install universal-ctags (apt install universal-ctags / brew install universal-ctags)."
-  # -n  => store line NUMBERS as the address (trivial to parse: file<TAB>line)
-  # -R  => recurse; ctags honours .gitignore-style excludes for vendor/ etc. is
-  #        not automatic, so we exclude the usual heavy dirs explicitly.
-  ctags -R -n \
-    --languages=PHP \
-    --kinds-PHP="$KINDS" \
-    --exclude=vendor --exclude=node_modules --exclude=.git \
-    --exclude='*.min.php' \
-    -f "$TAGS_FILE" . 2>/dev/null || die "ctags failed to build the index."
-  local n
-  n=$(grep -cv '^!' "$TAGS_FILE" 2>/dev/null || echo 0)
-  printf 'Indexed %s PHP symbols -> %s\n' "$n" "$TAGS_FILE"
-}
+2. **`phpnav` (ctags + ripgrep)** — the fast, zero-dependency fallback in
+   `scripts/phpnav`. `ctags` precomputes a sorted map from every symbol to its
+   exact `file:line`, and `ripgrep` handles usage and free-text search far
+   faster than `grep -r`. Reach for this when the LSP isn't available (Phpactor
+   not installed, or still warming up its index on a very large repo) or for
+   quick lexical lookups and arbitrary string searches.
 
-ensure_index() {
-  [ -f "$TAGS_FILE" ] || { printf 'No index found, building one...\n' >&2; cmd_index >&2; }
-}
+Either layer beats `find`/`grep -r`. Drop to `find` only when you genuinely need
+to match *filenames* (e.g. "list every `*Test.php`").
 
-# Print a tag hit as:  path:line  [kind]  name
-# readtags emits:  name <TAB> file <TAB> line;"  <TAB> kind:<k> ...
-# (No dependency on `column`; many systems don't ship it.)
-print_hits() {
-  awk -F'\t' '
-    {
-      name=$1; file=$2;
-      line=$3; sub(/;".*/, "", line);          # strip the ;"... trailer
-      kind="?";
-      for (i=4; i<=NF; i++) {
-        if ($i ~ /^kind:/)      { kind=$i; sub(/^kind:/, "", kind) }
-        else if (length($i)==1) { kind=$i }     # short-form kind field
-      }
-      printf "%s:%s  [%s]  %s\n", file, line, kind, name
-    }' | sort -u
-}
+## Setup
 
-cmd_def() {
-  [ $# -ge 1 ] || die "usage: phpnav def <symbol>"
-  ensure_index
-  local sym="$1" out
-  if command -v readtags >/dev/null 2>&1; then
-    # -e exact match. readtags needs a sorted tags file (ctags sorts by default).
-    out=$(readtags -t "$TAGS_FILE" -e "$sym" 2>/dev/null || true)
-  else
-    out=$(awk -F'\t' -v s="$sym" '$1==s' "$TAGS_FILE" 2>/dev/null || true)
-  fi
-  [ -n "$out" ] || die "no definition found for '$sym'. Try: phpnav refs '$sym'"
-  printf '%s\n' "$out" | print_hits
-}
+The LSP layer needs the **Phpactor** binary on `PATH` (and a PHP runtime). The
+plugin only configures the connection — it does not ship the server — so install
+it once. See `references/phpactor.md` for the full install and tuning notes; the
+short version:
 
-cmd_refs() {
-  [ $# -ge 1 ] || die "usage: phpnav refs <symbol>"
-  need rg "Install ripgrep (apt install ripgrep / brew install ripgrep)."
-  # -w word boundary so "User" doesn't match "UserFactory"; PHP files only.
-  # The trailing "." is required: without an explicit path, ripgrep reads stdin.
-  # vendor/ and node_modules/ are excluded to match `index` (override by
-  # cd-ing into vendor/ if you specifically need library internals).
-  rg --type php -n -w --color=never -g '!vendor' -g '!node_modules' -- "$1" . \
-    || die "no usages of '$1' found in PHP files."
-}
+```bash
+curl -Lo phpactor.phar https://github.com/phpactor/phpactor/releases/latest/download/phpactor.phar
+chmod +x phpactor.phar && sudo mv phpactor.phar /usr/local/bin/phpactor
+phpactor language-server --help        # confirm it runs
+```
 
-cmd_outline() {
-  [ $# -ge 1 ] || die "usage: phpnav outline <file>"
-  need ctags "Install universal-ctags."
-  [ -f "$1" ] || die "file not found: $1"
-  # -x prints a human-readable cross-reference (symbol, kind, line, source line).
-  ctags -x --languages=PHP --kinds-PHP="$KINDS" "$1" \
-    || die "could not outline '$1'."
-}
+If you see "Executable not found in $PATH" in the `/plugin` Errors tab, the
+`phpactor` binary isn't on `PATH`. The `phpnav` fallback additionally needs
+`ctags` (Universal Ctags, *not* the old Exuberant Ctags) and `rg` (ripgrep):
 
-cmd_grep() {
-  [ $# -ge 1 ] || die "usage: phpnav grep <pattern>"
-  need rg "Install ripgrep."
-  rg --type php -n --color=never -g '!vendor' -g '!node_modules' -- "$1" . \
-    || die "no matches for '$1' in PHP files."
-}
+```bash
+command -v ctags >/dev/null && command -v rg >/dev/null && echo ok
+# Debian/Ubuntu:  apt-get install -y universal-ctags ripgrep
+# macOS (brew):   brew install universal-ctags ripgrep
+```
 
-usage() {
-  sed -n '/^# phpnav —/,/it is a build artifact/p' "$0" | sed 's/^# \{0,1\}//'
-}
+When this skill is installed as its bundled plugin, a SessionStart hook runs
+`phpnav index` automatically at the start of every session, so the index is
+normally already built before the first lookup — you do not need to run it by
+hand. (If the tools above are missing, the hook skips indexing and prints a note
+rather than failing.) Add `.php-tags` to the project's `.gitignore`; it is a
+regenerable build artifact, not source. You can still rebuild on demand at any
+time with `./scripts/phpnav index`.
 
-main() {
-  [ $# -ge 1 ] || { usage; exit 1; }
-  local sub="$1"; shift
-  case "$sub" in
-    index)        cmd_index "$@" ;;
-    def|d)        cmd_def "$@" ;;
-    refs|r|uses)  cmd_refs "$@" ;;
-    outline|o)    cmd_outline "$@" ;;
-    grep|g|search) cmd_grep "$@" ;;
-    -h|--help|help) usage ;;
-    *) die "unknown command '$sub'. Run 'phpnav help'." ;;
-  esac
-}
+## Choosing the right command
 
-main "$@"
+The key decision is **definition vs. usage vs. filename** — pick the command
+that matches the question, rather than defaulting to a text search:
+
+- "Where is `X` defined / declared?", "go to the class/method", "show me the
+  implementation" → **`def`**. This is the common case and the biggest win.
+- "Where is `X` used / called?", "what references this?", "find all callers" →
+  **`refs`**.
+- "What's in this file?", "list the methods of this class" → **`outline`**.
+- A genuine free-text or regex search (a string literal, a SQL fragment, a
+  config key) that is not a symbol name → **`grep`**.
+- Only fall back to `find` when you truly need to match *filenames* (e.g. "list
+  every `*Test.php`"). For locating code, `find` is the wrong tool.
+
+## Commands
+
+```bash
+./scripts/phpnav def <symbol>      # where a symbol is DEFINED  -> file:line [kind] name
+./scripts/phpnav refs <symbol>     # everywhere a symbol is USED (PHP files only)
+./scripts/phpnav outline <file>    # symbols defined in one file, in source order
+./scripts/phpnav grep <pattern>    # free-text/regex search, restricted to PHP files
+./scripts/phpnav index             # rebuild the index
+```
+
+`def` may legitimately return more than one line — e.g. a method declared on an
+interface and implemented on a class, or several classes sharing a method name.
+That is correct and useful; present the candidates rather than assuming the
+first is the only one. The `[kind]` tag tells them apart: `c` class, `i`
+interface, `t` trait, `f` function/method, `d` constant, `n` namespace, `v`
+variable/property.
+
+**Example session:**
+
+```
+$ ./scripts/phpnav def PaymentProcessor
+src/Payment/PaymentProcessor.php:10  [c]  PaymentProcessor
+
+$ ./scripts/phpnav def refund
+src/Payment/PaymentProcessor.php:7   [f]  refund    # interface declaration
+src/Payment/PaymentProcessor.php:17  [f]  refund    # class implementation
+
+$ ./scripts/phpnav refs PaymentProcessor
+src/checkout.php:6:$processor = new PaymentProcessor();
+```
+
+## Keeping the index fresh
+
+The ctags index is a snapshot taken at session start (by the bundled hook) or
+whenever you last ran `index`. After you create or substantially edit PHP files
+in a session — especially adding or renaming classes/methods — rerun
+`./scripts/phpnav index` before relying on `def` again, or a lookup may point at
+a stale line or miss a new symbol. `refs`, `outline`, and `grep` always read the
+live files, so they never go stale. The Phpactor LSP maintains its own index and
+updates as files change, so its results stay current without a manual rebuild.
+
+## When you need semantic accuracy
+
+`ctags` is fast and dependency-free but purely lexical: it does not resolve
+namespaces, inheritance, or `use` aliases, so it cannot reliably answer "which
+concrete classes implement this interface?" or follow a fully-qualified name
+through imports.
+
+That is exactly what the bundled **Phpactor** language server is for. When it is
+installed and active, Claude Code receives real-time diagnostics after each edit
+and can resolve definitions, references, implementations, and types through
+PHP's type system. Prefer the language server's results for semantic questions
+(implementers, real types, inheritance, accurate references); use `phpnav` as
+the instant, zero-setup fallback for plain definition/usage lookups or before
+the server has finished indexing. See `references/phpactor.md` for installation,
+the optional CLI indexer, and the Composer classmap shortcut.
