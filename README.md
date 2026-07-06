@@ -66,6 +66,7 @@ Symlinks only work in **WSL**. On native Windows, manually copy the `skills/*` f
 #### UI — Extension Points
 
 - [pimcore-studio-ui-context-menus](skills/pimcore-studio-ui-context-menus/SKILL.md)
+- [pimcore-studio-ui-filters](skills/pimcore-studio-ui-filters/SKILL.md)
 - [pimcore-studio-ui-listings](skills/pimcore-studio-ui-listings/SKILL.md)
 - [pimcore-studio-ui-navigation](skills/pimcore-studio-ui-navigation/SKILL.md)
 - [pimcore-studio-ui-tabs-editors](skills/pimcore-studio-ui-tabs-editors/SKILL.md)

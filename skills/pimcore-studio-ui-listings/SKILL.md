@@ -101,7 +101,9 @@ Enables inline cell editing. Cells become editable on interaction, and changes a
 
 ### GeneralFiltersDecorator
 
-Adds search and filter UI above the listing. Provides text search, column-specific filters, and filter persistence.
+Registered as `generalFilters`. Adds the search + filter sidebar for the listing — text search, PQL, and per-column **field filters**.
+
+It is built on the **declarative filter framework** (`defineFilter` / `createFiltersStore` / `useFilterQuery`): each filter is a descriptor, an *applied* store drives the query while a *draft* store backs the sidebar, and the decorator's data layer folds the composed filters into the listing query args. To add your own filter to this sidebar, or register a new per-column filter type (e.g. a currency or geo filter), see [`pimcore-studio-ui-filters`](../pimcore-studio-ui-filters/SKILL.md) — don't hand-roll it.
 
 ### ActionColumnDecorator
 
@@ -245,105 +247,52 @@ export const CarsListingModule: AbstractModule = {
 
 ## Custom Decorator Pattern
 
-Decorators are functions that receive listing props and return modified listing props. A decorator can modify up to three layers:
+A decorator is a function `(props, config?) => props` — it receives the composed listing props and returns modified props. Override only the fields you need and pass the rest through via `...baseProps`. The overridable fields fall into three layers:
 
-1. **Context layer** — React context provider wrapping the listing, exposing state to child components.
-2. **Data layer** — wraps `useGridOptions` to mutate the API query (filters, sort, paging parameters).
-3. **View layer** — wraps `ToolbarComponent` (or column renderers, overlays) to add UI.
+| Field | Layer | What it controls |
+|---|---|---|
+| `ContextComponent` | Context | React provider wrapping the listing; shares state across the other layers |
+| `useDataQueryHelper` | Data | The backend query — wrap its `getArgs()` to add filters/sort/paging |
+| `useGridOptions` | View | Grid/table UI — column definitions, cell renderers, `getGridProps()` |
+| `useSidebarOptions` | View | Sidebar tabs/entries (this is where the built-in filter tab lives) |
+| `ViewComponent` / `ConfigurationComponent` / `DataComponent` | — | Whole container components; rarely overridden |
+
+There is **no `ToolbarComponent` and no `queryArg`** in the contract — a toolbar is rendered from a `toolbarSlotName` slot (see [Toolbar Customization](#toolbar-customization)), and query args live under `body.filters`. Every hook layer follows the same pattern: grab the base hook, call it, override one method, spread the rest through.
+
+Every layer wraps the same way: grab the base hook/component, override the one piece you need, spread the rest through. The data layer is the most common — wrap `useDataQueryHelper` and override `getArgs()`. Filters, sort, and paging all live under `body.filters` (`columnFilters` as an array of Pimcore's internal `ColumnFilter` type, `sortFilter`, and `page`/`pageSize`):
 
 ```typescript
-import React, { createContext, useContext, useState } from 'react'
-import { type AbstractDecorator } from '@pimcore/studio-ui-bundle/modules/element'
+import { type AbstractDecorator, type AbstractDecoratorProps } from '@pimcore/studio-ui-bundle/modules/element'
 
-// --- Context layer: state via React context ---
-
-interface StatusFilterState {
-  status: string
-  setStatus: (value: string) => void
-}
-
-const StatusFilterContext = createContext<StatusFilterState | null>(null)
-
-export const useStatusFilter = (): StatusFilterState => {
-  const ctx = useContext(StatusFilterContext)
-  if (ctx === null) throw new Error('useStatusFilter must be used within provider')
-  return ctx
-}
-
-const withStatusFilterContext = (Wrapped: React.ComponentType<React.PropsWithChildren>) => {
-  const Provider: React.FC<React.PropsWithChildren> = ({ children }) => {
-    const [status, setStatus] = useState('')
-    return (
-      <StatusFilterContext.Provider value={{ status, setStatus }}>
-        <Wrapped>{children}</Wrapped>
-      </StatusFilterContext.Provider>
-    )
-  }
-  return Provider
-}
-
-// --- Data layer: inject filter into API query ---
-
-const withStatusFilterQuery = (useOriginal: UseGridOptionsHook): UseGridOptionsHook => {
-  return (options) => {
-    const original = useOriginal(options)
-    const { status } = useStatusFilter()
-
-    return {
-      ...original,
-      queryArg: {
-        ...original.queryArg,
-        filters: [
-          ...(original.queryArg.filters ?? []),
-          { field: 'status', value: status }
-        ]
+const withArchivedScope = (useBase: AbstractDecoratorProps['useDataQueryHelper']): AbstractDecoratorProps['useDataQueryHelper'] => {
+  return () => {
+    const { getArgs: baseGetArgs, ...rest } = useBase()
+    const getArgs: typeof baseGetArgs = () => {
+      const args = baseGetArgs()
+      return {
+        ...args,
+        body: {
+          ...args.body,
+          filters: { ...args.body.filters, columnFilters: [...(args.body.filters?.columnFilters ?? []), /* your ColumnFilter */] }
+        }
       }
     }
+    return { ...rest, getArgs }
   }
 }
 
-// --- View layer: add toolbar input ---
-
-const withStatusFilterToolbar = (Toolbar: React.ComponentType): React.FC => {
-  return () => {
-    const { status, setStatus } = useStatusFilter()
-    return (
-      <>
-        <Toolbar />
-        <input
-          onChange={(e) => { setStatus(e.target.value) }}
-          placeholder="Status..."
-          value={status}
-        />
-      </>
-    )
-  }
+export const ArchivedScopeDecorator: AbstractDecorator = (props) => {
+  const { useDataQueryHelper, ...baseProps } = props
+  return { ...baseProps, useDataQueryHelper: withArchivedScope(useDataQueryHelper) }
 }
-
-// --- The decorator itself combines all three layers ---
-
-export const StatusFilterDecorator: AbstractDecorator = (props) => {
-  const { useGridOptions, ContextComponent, ToolbarComponent, ...baseProps } = props
-
-  return {
-    ...baseProps,
-    ContextComponent: withStatusFilterContext(ContextComponent),
-    useGridOptions: withStatusFilterQuery(useGridOptions),
-    ToolbarComponent: withStatusFilterToolbar(ToolbarComponent)
-  }
-}
-
-// --- Register it on a copied builder ---
 
 const customBuilder = listingBuilder.copy()
-customBuilder.addDecorator({
-  name: 'statusFilter',
-  decorator: StatusFilterDecorator,
-  priority: 60
-})
+customBuilder.addDecorator({ name: 'archivedScope', decorator: ArchivedScopeDecorator, priority: 60 })
 ```
 
-A decorator doesn't need to implement all three layers — touch only the ones you need and pass the rest through in `baseProps`.
+The other layers follow the same shape: wrap `ContextComponent` (an `ElementType`) with a React provider to share state, `useGridOptions` to reshape columns / `getGridProps`, or `useSidebarOptions` to add a sidebar tab.
+
+> **For user-facing filters, don't assemble `columnFilters` by hand.** The built-in `generalFilters` decorator already runs the declarative filter framework in this same `useDataQueryHelper` layer — reuse it (see [`pimcore-studio-ui-filters`](../pimcore-studio-ui-filters/SKILL.md)). Hand-wrapping the data layer is for fixed, non-user constraints (scoping a view) or custom sort/paging.
 
 ## Common Mistakes
 
@@ -435,6 +384,7 @@ customBuilder.overrideDecorator({
 
 ## Next Steps
 
+- [**pimcore-studio-ui-filters**](../pimcore-studio-ui-filters/SKILL.md) - The filter framework behind `generalFilters`, plus custom per-column filter types
 - [**pimcore-studio-ui-tables-grids**](../pimcore-studio-ui-tables-grids/SKILL.md) - Grid component and TanStack Table for custom table views
 - [**pimcore-studio-ui-context-menus**](../pimcore-studio-ui-context-menus/SKILL.md) - Context menu registration and configuration
 - [**pimcore-studio-ui-widgets**](../pimcore-studio-ui-widgets/SKILL.md) - Widget system for registering listing views
