@@ -104,3 +104,12 @@ Symlinks only work in **WSL**. On native Windows, manually copy the `skills/*` f
 
 - [pimcore-studio-backend-exception](skills/pimcore-studio-backend-exception/SKILL.md)
 - [pimcore-studio-backend-openapi-docs](skills/pimcore-studio-backend-openapi-docs/SKILL.md)
+
+### GitHub Delegation
+
+Procedures for the Pimcore Bundle Manager extension's "Delegate to Claude" / "Review with Claude" buttons. Each button's prompt is a short skill invocation; the full step-by-step procedure lives in the skill.
+
+- [pimcore-github-issue](skills/pimcore-github-issue/SKILL.md)
+- [pimcore-github-pr-assist](skills/pimcore-github-pr-assist/SKILL.md)
+- [pimcore-github-pr-review](skills/pimcore-github-pr-review/SKILL.md)
+- [pimcore-github-security-advisory](skills/pimcore-github-security-advisory/SKILL.md)

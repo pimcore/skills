@@ -1,0 +1,7 @@
+{
+  "name": "php-navigator",
+  "version": "1.1.0",
+  "description": "Fast, token-efficient PHP code navigation. Bundles a ctags+ripgrep symbol index and a Phpactor language server for real-time diagnostics and semantic go-to-definition / find-references / find-implementations. Use instead of find/grep to locate where PHP classes, methods, functions, and constants are defined or used.",
+  "author": { "name": "Herbert Roth" },
+  "keywords": ["php", "navigation", "ctags", "ripgrep", "lsp", "phpactor", "code-search"]
+}
